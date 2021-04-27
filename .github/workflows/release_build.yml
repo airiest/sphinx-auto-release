@@ -1,0 +1,42 @@
+name: release build
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions/setup-python@v1
+        with:
+          python-version: 3.9
+      - name: Build pages
+        run: |
+          pip install -r requirements.txt
+          make html
+          touch build/html/.nojekyll
+      - name: create zip
+        run: |
+          mv ./build/html ./Document
+          zip -r download.zip ./Document
+      - name: create release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: upload HTML
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./download.zip
+          asset_name: download.zip
+          asset_content_type: application/zip
